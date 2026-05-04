@@ -1,0 +1,39 @@
+# ── Web scraping ───────────────────────────────────────────────────────────
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+pdfplumber>=0.10.0
+
+# ── NBA data APIs ──────────────────────────────────────────────────────────
+nba_api>=1.4.0
+
+# ── Data wrangling ─────────────────────────────────────────────────────────
+pandas>=2.1.0
+numpy>=1.26.0
+
+# ── Machine learning / survival analysis ───────────────────────────────────
+torch>=2.2.0
+scikit-learn>=1.4.0
+lifelines>=0.27.0
+scipy>=1.12.0
+
+# ── Hyperparameter optimisation ────────────────────────────────────────────
+optuna>=3.5.0
+optuna-dashboard>=0.14.0        # optional: visual HPO monitor
+
+# ── NLP / BioBERT ──────────────────────────────────────────────────────────
+transformers>=4.39.0
+datasets>=2.18.0
+snorkel>=0.9.9
+
+# ── Feature engineering ────────────────────────────────────────────────────
+# (no extra deps beyond pandas/numpy/sklearn)
+
+# ── Notebooks & visualisation ──────────────────────────────────────────────
+jupyter>=1.0.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+plotly>=5.19.0
+
+# ── Dev / quality ──────────────────────────────────────────────────────────
+tqdm>=4.66.0
