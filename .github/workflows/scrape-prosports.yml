@@ -1,0 +1,82 @@
+name: Scrape ProSportsTransactions
+
+# Trigger manually from GitHub UI (Actions tab → Run workflow)
+# or on a schedule — uncomment the cron line to run weekly
+on:
+  workflow_dispatch:
+    inputs:
+      begin_year:
+        description: 'Start year (e.g. 2010)'
+        required: false
+        default: '2010'
+      end_year:
+        description: 'End year (e.g. 2026, blank = current year)'
+        required: false
+        default: ''
+
+  # schedule:
+  #   - cron: '0 2 * * 0'   # every Sunday at 2 AM UTC
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120   # kill if it runs away; normal runs take 30-60 min
+
+    services:
+      flaresolverr:
+        image: ghcr.io/flaresolverr/flaresolverr:latest
+        ports:
+          - 8191:8191
+        options: >-
+          --health-cmd "curl -sf http://localhost:8191/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Wait for FlareSolverr
+        run: |
+          echo "Waiting for FlareSolverr..."
+          for i in $(seq 1 24); do
+            curl -sf http://localhost:8191/ && echo "FlareSolverr ready" && break
+            echo "  attempt $i/24, sleeping 5s..."
+            sleep 5
+          done
+
+      - name: Run scraper
+        run: |
+          END=${{ github.event.inputs.end_year }}
+          python -u data/scraping/scrape_prosports.py \
+            --begin-year ${{ github.event.inputs.begin_year || '2010' }} \
+            ${END:+--end-year $END}
+
+      - name: Upload ground truth CSV
+        uses: actions/upload-artifact@v4
+        if: always()   # upload even if scraper partially succeeded
+        with:
+          name: achilles-ground-truth-${{ github.run_id }}
+          path: data/processed/achilles_ground_truth.csv
+          retention-days: 30
+
+      - name: Commit updated ground truth back to repo
+        if: success()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed/achilles_ground_truth.csv
+          git diff --staged --quiet || git commit -m "ci: update achilles ground truth from ProSports scrape [run ${{ github.run_id }}]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
