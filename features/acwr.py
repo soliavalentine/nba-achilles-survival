@@ -23,10 +23,11 @@ import numpy as np
 import pandas as pd
 
 # (acute_days, chronic_days)  — EWMA span derived as 2*window_days - 1
+# Keys become column name suffixes: acwr_3_21, acwr_7_28, acwr_14_56
 WINDOW_CONFIGS = {
-    "short":  (7, 28),
-    "medium": (14, 42),
-    "long":   (28, 84),
+    "3_21":  (3, 21),
+    "7_28":  (7, 28),
+    "14_56": (14, 56),
 }
 
 # Avoid division by zero: if chronic EWMA < this floor, ACWR = NaN

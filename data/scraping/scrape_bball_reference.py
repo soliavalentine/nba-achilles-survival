@@ -452,27 +452,10 @@ def scrape_injury_logs(
 
 
 # ---------------------------------------------------------------------------
-# CLI entry point
+# CLI entry point — general scraper
 # ---------------------------------------------------------------------------
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Scrape Basketball-Reference for NBA Achilles survival study"
-    )
-    parser.add_argument(
-        "--min-year", type=int, default=1990,
-        help="Earliest season to include (default: 1990)"
-    )
-    parser.add_argument(
-        "--max-players", type=int, default=None,
-        help="Cap number of players (for testing)"
-    )
-    parser.add_argument(
-        "--skip-gamelogs", action="store_true",
-        help="Skip game-log scraping (profiles + injuries only)"
-    )
-    args = parser.parse_args()
-
+def main_general(args) -> None:
     manager = IPSafeRequestManager(cache_dir=RAW_DIR)
 
     print("=" * 60)
@@ -480,7 +463,6 @@ def main() -> None:
     print(f"  min_year={args.min_year}  cache={RAW_DIR}")
     print("=" * 60)
 
-    # Step 1: collect player URLs
     players = scrape_all_player_urls(manager, min_year=args.min_year)
     print(f"\n[index] {len(players)} players active since {args.min_year}")
 
@@ -488,20 +470,429 @@ def main() -> None:
         players = players[: args.max_players]
         print(f"[cap] testing on {len(players)} players\n")
 
-    # Step 2: player profiles + career stats
     profiles_csv = PROCESSED_DIR / "bbref_player_profiles.csv"
     scrape_player_profiles(manager, players, profiles_csv)
 
-    # Step 3: game logs
     if not args.skip_gamelogs:
         print("\n[gamelogs] scraping season-by-season game logs…")
         scrape_game_logs(manager, players, min_season=args.min_year)
 
-    # Step 4: injury logs
     print("\n[injuries] scraping injury/transaction logs…")
     scrape_injury_logs(manager, players)
-
     print("\nDone.")
+
+
+# ===========================================================================
+# ACWR PIPELINE  (--acwr flag)
+#
+# For every player in feature_matrix.csv:
+#   - Scrape game logs via basketball_reference_scraper (disk-cached JSON)
+#   - Compute EWMA-ACWR at 3 window scales using features/acwr.py
+#   - Extract point-in-time features at each player's observation_date
+#   - Emit data/processed/acwr_features.csv
+#   - Rebuild data/processed/feature_matrix.csv with ACWR joined in
+#
+# Run: python data/scraping/scrape_bball_reference.py --acwr
+# ===========================================================================
+
+import sys as _sys
+_sys.path.insert(0, str(ROOT))
+
+import numpy as np
+from nba_api.stats.endpoints import playergamelog as _nba_gamelog
+from features.acwr import compute_acwr, add_workload_spikes
+
+GAMELOG_CACHE = ROOT / "data" / "raw" / "gamelogs"
+GAMELOG_CACHE.mkdir(parents=True, exist_ok=True)
+
+_API_MIN_DELAY = 3.0   # seconds between nba_api calls
+_API_MAX_DELAY = 5.0
+_API_MAX_RETRIES = 3
+_API_INIT_BACKOFF = 10.0
+_API_MAX_BACKOFF  = 120.0
+
+# Seasons to fetch for each player type
+_RUPTURE_SEASONS_BACK  = 3   # 3 seasons of history for EWMA warm-up
+_CONTROL_SEASONS_BACK  = 2   # current + prior season
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _parse_mp(val) -> float:
+    """Convert '35:42' or '35.7' or DNP strings → decimal minutes."""
+    s = str(val).strip()
+    if s in ("", "Did Not Play", "Did Not Dress", "Not With Team", "Inactive", "nan"):
+        return 0.0
+    try:
+        if ":" in s:
+            mm, ss = s.split(":", 1)
+            return float(mm) + float(ss) / 60.0
+        return float(s)
+    except (ValueError, AttributeError):
+        return 0.0
+
+
+def _gamelog_cache_path(player_id: int, season_year: int) -> Path:
+    return GAMELOG_CACHE / f"{player_id}_{season_year}.json"
+
+
+def _get_season_year(date: pd.Timestamp) -> int:
+    """Return the ending calendar year of the NBA season containing date."""
+    return date.year + 1 if date.month >= 10 else date.year
+
+
+def _normalize_gamelog(df: pd.DataFrame, player_id: int) -> pd.DataFrame:
+    """
+    Normalise an nba_api PlayerGameLog DataFrame to the standard schema:
+        player_id, game_date, minutes_played, fga, fta, pts
+    Drops rows where the player did not play (MIN == 0).
+
+    nba_api column names: GAME_DATE, MIN, FGA, FTA, PTS
+    MIN may be "35:47" (string) or 35.78 (float) depending on api version.
+    """
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    out = pd.DataFrame()
+    out["game_date"]      = pd.to_datetime(df["GAME_DATE"], errors="coerce")
+    out["player_id"]      = player_id
+    out["minutes_played"] = df["MIN"].apply(_parse_mp)
+    out["fga"]  = pd.to_numeric(df.get("FGA", 0), errors="coerce").fillna(0)
+    out["fta"]  = pd.to_numeric(df.get("FTA", 0), errors="coerce").fillna(0)
+    out["pts"]  = pd.to_numeric(df.get("PTS", 0), errors="coerce").fillna(0)
+
+    out = out.dropna(subset=["game_date"])
+    out = out[out["minutes_played"] > 0].copy()
+    return out.sort_values("game_date").reset_index(drop=True)
+
+
+# ---------------------------------------------------------------------------
+# Disk-cached game log fetch via nba_api (one season at a time)
+# ---------------------------------------------------------------------------
+
+def _fetch_season(
+    player_name: str,
+    player_id: int,
+    season_year: int,
+) -> pd.DataFrame:
+    """
+    Return a normalised game-log DataFrame for one player-season.
+
+    Checks JSON disk cache first (data/raw/gamelogs/{player_id}_{season_year}.json).
+    Falls back to nba_api.stats.endpoints.playergamelog with 3–5 s delay and
+    exponential back-off on failure.  Returns empty DataFrame on failure.
+
+    Uses nba_api instead of basketball_reference_scraper: BBRef blocks automated
+    requests; nba_api is the official stats source and does not block.
+    """
+    path = _gamelog_cache_path(player_id, season_year)
+
+    if path.exists():
+        try:
+            cached = pd.read_json(path, convert_dates=["game_date"])
+            if not cached.empty:
+                return cached
+        except Exception:
+            path.unlink(missing_ok=True)
+
+    season_str_val = f"{season_year - 1}-{str(season_year)[2:]}"
+    backoff = _API_INIT_BACKOFF
+
+    for attempt in range(_API_MAX_RETRIES):
+        delay = random.uniform(_API_MIN_DELAY, _API_MAX_DELAY)
+        print(
+            f"  [nba_api] {delay:.1f}s → {player_name} {season_str_val}"
+            + (f"  (retry {attempt})" if attempt else "")
+        )
+        time.sleep(delay)
+
+        try:
+            raw = _nba_gamelog.PlayerGameLog(
+                player_id=player_id,
+                season=season_str_val,
+                season_type_all_star="Regular Season",
+            ).get_data_frames()[0]
+
+            df = _normalize_gamelog(raw, player_id)
+
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if df.empty:
+                # Cache the empty result to skip on future runs
+                pd.DataFrame().to_json(path, orient="records")
+                print(f"  [nba_api] no games found: {player_name} {season_str_val}")
+            else:
+                df.to_json(path, orient="records", date_format="iso")
+                print(f"  [nba_api] {len(df)} games cached → {path.name}")
+            return df
+
+        except Exception as exc:
+            print(
+                f"  [nba_api] attempt {attempt + 1}/{_API_MAX_RETRIES} failed: "
+                f"{str(exc)[:120]}"
+            )
+            time.sleep(backoff)
+            backoff = min(backoff * 2.0, _API_MAX_BACKOFF)
+
+    print(f"  [nba_api] giving up on {player_name} {season_str_val}")
+    return pd.DataFrame()
+
+
+# ---------------------------------------------------------------------------
+# Multi-season loader with observation-date filter
+# ---------------------------------------------------------------------------
+
+def _load_player_logs(
+    player_name: str,
+    player_id: int,
+    obs_date: pd.Timestamp,
+    event: int,
+) -> pd.DataFrame:
+    """
+    Fetch and concatenate all required seasons for a player, then
+    return only games on or before obs_date.
+
+    Rupture players: 3 seasons back  (needs EWMA warm-up over full chronic window)
+    Control players: 2 seasons back  (current season + prior for warm-up)
+    """
+    season_year = _get_season_year(obs_date)
+    seasons_back = _RUPTURE_SEASONS_BACK if event == 1 else _CONTROL_SEASONS_BACK
+    target_seasons = range(season_year - seasons_back + 1, season_year + 1)
+
+    frames = []
+    for sy in target_seasons:
+        df = _fetch_season(player_name, player_id, sy)
+        if not df.empty:
+            frames.append(df)
+
+    if not frames:
+        return pd.DataFrame()
+
+    all_games = pd.concat(frames, ignore_index=True)
+    all_games["game_date"] = pd.to_datetime(all_games["game_date"])
+    all_games = all_games.sort_values("game_date").drop_duplicates("game_date")
+    return all_games[all_games["game_date"] <= obs_date].copy()
+
+
+# ---------------------------------------------------------------------------
+# Point-in-time ACWR feature extraction
+# ---------------------------------------------------------------------------
+
+def _pit_features(
+    player_id: int,
+    player_name: str,
+    game_df: pd.DataFrame,
+    obs_date: pd.Timestamp,
+) -> dict:
+    """
+    Given all games for a player up to obs_date, compute the ACWR feature
+    vector as it would be observed at obs_date.
+    """
+    base: dict = {
+        "player_id":          player_id,
+        "observation_date":   obs_date.date(),
+        "acwr_3_21":          np.nan,
+        "acwr_7_28":          np.nan,
+        "acwr_14_56":         np.nan,
+        "acwr_spike_flag":    0,
+        "days_since_last_game":  np.nan,
+        "games_last_7_days":  0,
+        "games_last_14_days": 0,
+    }
+
+    if game_df.empty:
+        return base
+
+    game_df = game_df.copy()
+    game_df["game_date"] = pd.to_datetime(game_df["game_date"])
+
+    last_game = game_df["game_date"].max()
+    base["days_since_last_game"] = int((obs_date - last_game).days)
+    base["games_last_7_days"]    = int(
+        (game_df["game_date"] >= obs_date - pd.Timedelta(days=7)).sum()
+    )
+    base["games_last_14_days"]   = int(
+        (game_df["game_date"] >= obs_date - pd.Timedelta(days=14)).sum()
+    )
+
+    try:
+        acwr_df = compute_acwr(
+            game_df,
+            player_col="player_id",
+            date_col="game_date",
+            load_col="minutes_played",
+            fill_gaps=True,
+        )
+        last = acwr_df.iloc[-1]
+        base["acwr_3_21"]  = float(last.get("acwr_3_21",  np.nan))
+        base["acwr_7_28"]  = float(last.get("acwr_7_28",  np.nan))
+        base["acwr_14_56"] = float(last.get("acwr_14_56", np.nan))
+        base["acwr_spike_flag"] = int(
+            any(
+                not np.isnan(v) and v > 1.5
+                for v in (base["acwr_3_21"], base["acwr_7_28"], base["acwr_14_56"])
+            )
+        )
+    except Exception as exc:
+        print(f"  [acwr] computation failed for {player_name}: {exc}")
+
+    return base
+
+
+# ---------------------------------------------------------------------------
+# Main pipeline functions
+# ---------------------------------------------------------------------------
+
+def build_acwr_features(
+    feature_matrix_csv: Path = PROCESSED_DIR / "feature_matrix.csv",
+    output_csv: Path = PROCESSED_DIR / "acwr_features.csv",
+) -> pd.DataFrame:
+    """
+    For every player in feature_matrix.csv:
+      1. Fetch game logs (disk-cached) via basketball_reference_scraper
+      2. Compute point-in-time ACWR at observation_date
+      3. Write acwr_features.csv and return DataFrame
+    """
+    fm = pd.read_csv(feature_matrix_csv, parse_dates=["observation_date"])
+
+    rows = []
+    n = len(fm)
+    for i, row in fm.iterrows():
+        pid   = int(row["player_id"])
+        pname = str(row["player_name"])
+        obs   = pd.Timestamp(row["observation_date"])
+        event = int(row["event"])
+
+        print(f"\n[{i+1}/{n}] {pname}  obs={obs.date()}  event={event}")
+        game_df = _load_player_logs(pname, pid, obs, event)
+        print(f"  → {len(game_df)} games loaded before obs date")
+
+        feat = _pit_features(pid, pname, game_df, obs)
+        rows.append(feat)
+
+    acwr_df = pd.DataFrame(rows)
+    acwr_df.to_csv(output_csv, index=False)
+
+    n_valid = acwr_df["acwr_7_28"].notna().sum()
+    print(f"\n[acwr] saved {len(acwr_df)} rows ({n_valid} with valid ACWR) → {output_csv}")
+    return acwr_df
+
+
+def rebuild_feature_matrix(
+    feature_matrix_csv: Path = PROCESSED_DIR / "feature_matrix.csv",
+    acwr_csv: Path = PROCESSED_DIR / "acwr_features.csv",
+    output_csv: Path = PROCESSED_DIR / "feature_matrix.csv",
+) -> pd.DataFrame:
+    """
+    Left-join acwr_features onto feature_matrix on (player_id, observation_date)
+    and overwrite feature_matrix.csv.
+    """
+    fm   = pd.read_csv(feature_matrix_csv)
+    acwr = pd.read_csv(acwr_csv)
+
+    # Normalise join keys
+    fm["observation_date"]   = pd.to_datetime(fm["observation_date"]).dt.date.astype(str)
+    acwr["observation_date"] = pd.to_datetime(acwr["observation_date"]).dt.date.astype(str)
+    acwr["player_id"]        = acwr["player_id"].astype(int)
+    fm["player_id"]          = fm["player_id"].astype(int)
+
+    acwr_cols = [
+        c for c in acwr.columns
+        if c not in ("player_id", "observation_date")
+    ]
+    # Drop stale ACWR columns from fm if re-running
+    fm = fm.drop(columns=[c for c in acwr_cols if c in fm.columns], errors="ignore")
+
+    merged = fm.merge(
+        acwr[["player_id", "observation_date"] + acwr_cols],
+        on=["player_id", "observation_date"],
+        how="left",
+    )
+    merged.to_csv(output_csv, index=False)
+
+    feature_cols = [
+        c for c in merged.columns
+        if c not in {
+            "player_id", "player_name", "observation_date",
+            "event", "time_to_event_days", "birth_date",
+        }
+    ]
+    print(f"[rebuild] {len(merged)} rows  ·  {len(feature_cols)} features  → {output_csv}")
+    print(f"  feature columns: {feature_cols}")
+    return merged
+
+
+def run_acwr_pipeline() -> None:
+    """Orchestrate the full ACWR pipeline: scrape → compute → rebuild."""
+    fm_csv   = PROCESSED_DIR / "feature_matrix.csv"
+    acwr_csv = PROCESSED_DIR / "acwr_features.csv"
+
+    print("=" * 60)
+    print("ACWR PIPELINE")
+    print(f"  feature_matrix : {fm_csv}")
+    print(f"  gamelog cache  : {GAMELOG_CACHE}")
+    print(f"  output         : {acwr_csv}")
+    print("=" * 60)
+
+    print("\n── Step 1: scrape game logs + compute ACWR features ──")
+    build_acwr_features(fm_csv, acwr_csv)
+
+    print("\n── Step 2: rebuild feature_matrix.csv ──")
+    merged = rebuild_feature_matrix(fm_csv, acwr_csv, fm_csv)
+
+    # Quick sanity check — run the same load_data path train.py uses
+    from sklearn.preprocessing import StandardScaler
+    non_feat = {
+        "player_id", "player_name", "observation_date",
+        "event", "time_to_event_days", "birth_date",
+        "time_clipped", "time_bin",
+    }
+    feat_cols = [
+        c for c in merged.columns
+        if c not in non_feat and merged[c].dtype in (float, int, "float64", "int64")
+    ]
+    print(f"\n[sanity] {len(feat_cols)} numeric feature cols, "
+          f"{merged['event'].sum()} events, "
+          f"{(merged['event']==0).sum()} censored")
+    print("\nACWR pipeline complete.")
+    print("Next: python -m models.train --no-hpo --epochs 20")
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Basketball-Reference scraper + ACWR pipeline"
+    )
+    subparsers = parser.add_subparsers(dest="mode")
+
+    # ── mode: acwr (focused pipeline) ────────────────────────────────────
+    subparsers.add_parser(
+        "acwr",
+        help="Scrape game logs + build ACWR features + rebuild feature_matrix.csv",
+    )
+
+    # ── mode: full (original general scraper) ────────────────────────────
+    full_p = subparsers.add_parser("full", help="Full BBRef player/gamelog scrape")
+    full_p.add_argument("--min-year",      type=int, default=1990)
+    full_p.add_argument("--max-players",   type=int, default=None)
+    full_p.add_argument("--skip-gamelogs", action="store_true")
+
+    args = parser.parse_args()
+
+    if args.mode == "acwr" or args.mode is None and len(_sys.argv) == 1:
+        # Default with no args → print help
+        if args.mode is None:
+            parser.print_help()
+            return
+        run_acwr_pipeline()
+    elif args.mode == "full":
+        main_general(args)
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
