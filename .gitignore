@@ -50,3 +50,9 @@ scraper.log
 *.key
 *.pem
 secrets.json
+.prosports_pid
+.scraper_pid
+*.pid
+logs/
+data/raw/nba_api_bio_cache.json
+data/raw/nba_api_season_cache.json
