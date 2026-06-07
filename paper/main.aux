@@ -1,0 +1,94 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{gabbett2016}
+\citation{ratner2017snorkel}
+\citation{torresronda2022}
+\citation{lee2018deephit}
+\citation{gabbett2016}
+\citation{cohan2021,lu2022}
+\citation{kapinski2024}
+\citation{lee2018deephit}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
+\citation{cohan2021}
+\citation{lu2022}
+\citation{kapinski2024}
+\citation{september2012}
+\citation{li2025}
+\citation{gabbett2016}
+\citation{torresronda2022}
+\citation{lee2018deephit}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{2}{section.2}\protected@file@percent }
+\newlabel{sec:related}{{2}{2}{Related Work}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{NBA injury prediction.}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Achilles tendon ML.}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Workload and injury: ACWR.}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Survival analysis and competing risks.}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Methods}{2}{section.3}\protected@file@percent }
+\newlabel{sec:methods}{{3}{2}{Methods}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Data Collection and Cohort Construction}{2}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:data}{{3.1}{2}{Data Collection and Cohort Construction}{subsection.3.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Ground truth.}{2}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Control matching.}{2}{subsection.3.1}\protected@file@percent }
+\citation{lee2018deephit}
+\citation{lee2018deephit}
+\citation{lundberg2017shap}
+\citation{ratner2017snorkel}
+\citation{lee2020biobert}
+\citation{gabbett2016}
+\@writefile{toc}{\contentsline {paragraph}{Temporal split.}{3}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Feature Engineering}{3}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:features}{{3.2}{3}{Feature Engineering}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{EWMA-ACWR.}{3}{subsection.3.2}\protected@file@percent }
+\newlabel{eq:ewma}{{1}{3}{EWMA-ACWR}{equation.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Additional workload features.}{3}{equation.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Demographics.}{3}{equation.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Model Architecture}{3}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:model}{{3.3}{3}{Model Architecture}{subsection.3.3}{}}
+\newlabel{eq:loss}{{2}{3}{Model Architecture}{equation.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Evaluation.}{3}{equation.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}NLP Prodromal Pipeline (Design)}{3}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:nlp}{{3.4}{3}{NLP Prodromal Pipeline (Design)}{subsection.3.4}{}}
+\citation{gabbett2016,torresronda2022}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Results}{4}{section.4}\protected@file@percent }
+\newlabel{sec:results}{{4}{4}{Results}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Model Performance}{4}{subsection.4.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Test-set C-index by feature set. Test split: 2022+ cohort, $n=36$ (9 ruptures, 27 matched controls).}}{4}{table.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:cindex}{{1}{4}{Test-set C-index by feature set. Test split: 2022+ cohort, $n=36$ (9 ruptures, 27 matched controls)}{table.caption.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}SHAP Feature Attribution}{4}{subsection.4.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Top-5 features by mean $|\text  {SHAP}|$ on the test set ($n=36$, SHAP evaluated on 1-year ATR cumulative incidence).}}{4}{table.caption.2}\protected@file@percent }
+\newlabel{tab:shap}{{2}{4}{Top-5 features by mean $|\text {SHAP}|$ on the test set ($n=36$, SHAP evaluated on 1-year ATR cumulative incidence)}{table.caption.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Workload at Time of Rupture}{4}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{4}{section.5}\protected@file@percent }
+\newlabel{sec:discussion}{{5}{4}{Discussion}{section.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Load features dominate demographics.}{4}{section.5}\protected@file@percent }
+\citation{gabbett2016}
+\bibstyle{abbrvnat}
+\bibdata{references}
+\bibcite{cohan2021}{{1}{2021}{{Cohan et~al.}}{{Cohan, Kates, and Labbe}}}
+\bibcite{gabbett2016}{{2}{2016}{{Gabbett}}{{}}}
+\bibcite{kapinski2024}{{3}{2024}{{Kapi{\'n}ski et~al.}}{{Kapi{\'n}ski, Poborc, Rutkowska, and Sikorski}}}
+\bibcite{lee2018deephit}{{4}{2018}{{Lee et~al.}}{{Lee, Zame, Yoon, and van~der Schaar}}}
+\bibcite{lee2020biobert}{{5}{2020}{{Lee et~al.}}{{Lee, Yoon, Kim, Kim, Kim, So, and Kang}}}
+\bibcite{li2025}{{6}{2025}{{Li et~al.}}{{Li, Chen, Wang, and Sun}}}
+\@writefile{toc}{\contentsline {paragraph}{ACWR point-in-time overlap is expected, not a failure.}{5}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Limitations.}{5}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Clinical implications.}{5}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{5}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{6}{5}{Conclusion}{section.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Acknowledgements.}{5}{section.6}\protected@file@percent }
+\bibcite{lu2022}{{7}{2022}{{Lu et~al.}}{{Lu, Xie, and Duan}}}
+\bibcite{lundberg2017shap}{{8}{2017}{{Lundberg and Lee}}{{}}}
+\bibcite{ratner2017snorkel}{{9}{2017}{{Ratner et~al.}}{{Ratner, Bach, Ehrenberg, Fries, Wu, and R{\'e}}}}
+\bibcite{september2012}{{10}{2009}{{September et~al.}}{{September, Cook, Handley, van~der Merwe, Schwellnus, and Collins}}}
+\bibcite{torresronda2022}{{11}{2022}{{Torres-Ronda et~al.}}{{Torres-Ronda, Beanland, Whitehead, Sweeting, and Clubb}}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces \textbf  {C-index by feature set.} Adding EWMA-ACWR workload features to a demographics-only baseline raises the held-out test C-index from 0.46 to 0.81. The dashed line marks chance-level discrimination (0.50). The demographics-only model performs below chance, indicating that static anthropometric features systematically mis-rank matched patients.}}{7}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:cindex}{{1}{7}{\textbf {C-index by feature set.} Adding EWMA-ACWR workload features to a demographics-only baseline raises the held-out test C-index from 0.46 to 0.81. The dashed line marks chance-level discrimination (0.50). The demographics-only model performs below chance, indicating that static anthropometric features systematically mis-rank matched patients}{figure.caption.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces \textbf  {SHAP feature importance on the held-out test set.} Features are coloured by category: recent load (red), recovery (orange), workload ratio (light blue), demographics (dark blue). The top three features are all load/recovery metrics. The first demographic feature (height) ranks 5th with mean $|\text  {SHAP}|$ of 0.0052, approximately $6\times $ smaller than the top predictor (days since last game, 0.0298).}}{8}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:shap}{{2}{8}{\textbf {SHAP feature importance on the held-out test set.} Features are coloured by category: recent load (red), recovery (orange), workload ratio (light blue), demographics (dark blue). The top three features are all load/recovery metrics. The first demographic feature (height) ranks 5th with mean $|\text {SHAP}|$ of 0.0052, approximately $6\times $ smaller than the top predictor (days since last game, 0.0298)}{figure.caption.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces \textbf  {ACWR 7:28 at observation date for rupture patients and matched controls (test set).} Individual data points are shown with mean $\pm $ SD bars. The dashed line marks the commonly used spike threshold ($\text  {ACWR} > 1.5$). Distributions overlap substantially (rupture $1.36 \pm 0.68$; control $1.41 \pm 0.65$), consistent with prior literature suggesting that temporal trajectory rather than point-in-time magnitude drives injury risk. The survival model captures this dynamic through sequential game-log features, not through single-value ACWR thresholds.}}{8}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:acwr}{{3}{8}{\textbf {ACWR 7:28 at observation date for rupture patients and matched controls (test set).} Individual data points are shown with mean $\pm $ SD bars. The dashed line marks the commonly used spike threshold ($\text {ACWR} > 1.5$). Distributions overlap substantially (rupture $1.36 \pm 0.68$; control $1.41 \pm 0.65$), consistent with prior literature suggesting that temporal trajectory rather than point-in-time magnitude drives injury risk. The survival model captures this dynamic through sequential game-log features, not through single-value ACWR thresholds}{figure.caption.5}{}}
+\gdef \@abspage@last{8}

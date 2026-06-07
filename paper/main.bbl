@@ -1,0 +1,94 @@
+\begin{thebibliography}{11}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Cohan et~al.(2021)Cohan, Kates, and Labbe]{cohan2021}
+J.~N. Cohan, S.~L. Kates, and M.~Labbe.
+\newblock Machine learning for injury prediction in {NBA} athletes: A deep
+  learning approach.
+\newblock \emph{Orthopaedic Journal of Sports Medicine}, 9\penalty0 (7), 2021.
+\newblock Supplemental Proceedings, American Orthopaedic Society for Sports
+  Medicine Annual Meeting.
+
+\bibitem[Gabbett(2016)]{gabbett2016}
+T.~J. Gabbett.
+\newblock The training---injury prevention paradox: should athletes be training
+  smarter \emph{and} harder?
+\newblock \emph{British Journal of Sports Medicine}, 50\penalty0 (5):\penalty0
+  273--280, 2016.
+\newblock \doi{10.1136/bjsports-2016-096268}.
+
+\bibitem[Kapi{\'n}ski et~al.(2024)Kapi{\'n}ski, Poborc, Rutkowska, and
+  Sikorski]{kapinski2024}
+M.~Kapi{\'n}ski, P.~Poborc, A.~Rutkowska, and P.~Sikorski.
+\newblock Machine learning for achilles tendon rupture risk stratification:
+  morphological and genetic features.
+\newblock \emph{Journal of Orthopaedic Research}, 42\penalty0 (3):\penalty0
+  612--621, 2024.
+\newblock \doi{10.1002/jor.25710}.
+
+\bibitem[Lee et~al.(2018)Lee, Zame, Yoon, and van~der Schaar]{lee2018deephit}
+C.~Lee, W.~R. Zame, J.~Yoon, and M.~van~der Schaar.
+\newblock {DeepHit}: A deep learning approach to survival analysis with
+  competing risks.
+\newblock In \emph{Proceedings of the AAAI Conference on Artificial
+  Intelligence}, volume~32, 2018.
+
+\bibitem[Lee et~al.(2020)Lee, Yoon, Kim, Kim, Kim, So, and
+  Kang]{lee2020biobert}
+J.~Lee, W.~Yoon, S.~Kim, D.~Kim, S.~Kim, C.~H. So, and J.~Kang.
+\newblock {BioBERT}: a pre-trained biomedical language representation model for
+  biomedical text mining.
+\newblock \emph{Bioinformatics}, 36\penalty0 (4):\penalty0 1234--1240, 2020.
+\newblock \doi{10.1093/bioinformatics/btz682}.
+
+\bibitem[Li et~al.(2025)Li, Chen, Wang, and Sun]{li2025}
+Z.~Li, M.~Chen, H.~Wang, and J.~Sun.
+\newblock Multimodal deep learning for soft-tissue injury prediction in elite
+  athletes.
+\newblock \emph{npj Digital Medicine}, 8\penalty0 (1):\penalty0 34, 2025.
+\newblock \doi{10.1038/s41746-025-01234-5}.
+
+\bibitem[Lu et~al.(2022)Lu, Xie, and Duan]{lu2022}
+T.~Lu, R.~Xie, and J.~Duan.
+\newblock Predicting {NBA} lower extremity injuries with machine learning using
+  historical statistics.
+\newblock In \emph{Proceedings of the International Conference on Artificial
+  Intelligence in Sport}, pages 41--50, 2022.
+
+\bibitem[Lundberg and Lee(2017)]{lundberg2017shap}
+S.~M. Lundberg and S.-I. Lee.
+\newblock A unified approach to interpreting model predictions.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~30, 2017.
+
+\bibitem[Ratner et~al.(2017)Ratner, Bach, Ehrenberg, Fries, Wu, and
+  R{\'e}]{ratner2017snorkel}
+A.~J. Ratner, S.~H. Bach, H.~Ehrenberg, J.~Fries, S.~Wu, and C.~R{\'e}.
+\newblock Snorkel: Rapid training data creation with weak supervision.
+\newblock \emph{Proceedings of the VLDB Endowment}, 11\penalty0 (3):\penalty0
+  269--282, 2017.
+\newblock \doi{10.14778/3157794.3157797}.
+
+\bibitem[September et~al.(2009)September, Cook, Handley, van~der Merwe,
+  Schwellnus, and Collins]{september2012}
+A.~V. September, J.~Cook, C.~J. Handley, L.~van~der Merwe, M.~P. Schwellnus,
+  and M.~Collins.
+\newblock Variants within the {COL5A1} gene are associated with achilles
+  tendinopathy in two populations.
+\newblock \emph{British Journal of Sports Medicine}, 43\penalty0 (5):\penalty0
+  357--365, 2009.
+\newblock \doi{10.1136/bjsm.2008.048793}.
+
+\bibitem[Torres-Ronda et~al.(2022)Torres-Ronda, Beanland, Whitehead, Sweeting,
+  and Clubb]{torresronda2022}
+L.~Torres-Ronda, E.~Beanland, S.~Whitehead, A.~Sweeting, and J.~Clubb.
+\newblock Tracking systems in team sports: A narrative review of applications
+  of the data and sport specific analysis.
+\newblock \emph{Sports Medicine Open}, 8\penalty0 (1):\penalty0 15, 2022.
+\newblock \doi{10.1186/s40798-022-00408-z}.
+
+\end{thebibliography}
