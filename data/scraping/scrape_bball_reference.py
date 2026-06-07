@@ -791,9 +791,9 @@ def rebuild_feature_matrix(
     fm   = pd.read_csv(feature_matrix_csv)
     acwr = pd.read_csv(acwr_csv)
 
-    # Normalise join keys
-    fm["observation_date"]   = pd.to_datetime(fm["observation_date"]).dt.date.astype(str)
-    acwr["observation_date"] = pd.to_datetime(acwr["observation_date"]).dt.date.astype(str)
+    # Normalise join keys (format='mixed' handles both date-only and datetime strings)
+    fm["observation_date"]   = pd.to_datetime(fm["observation_date"], format="mixed").dt.date.astype(str)
+    acwr["observation_date"] = pd.to_datetime(acwr["observation_date"], format="mixed").dt.date.astype(str)
     acwr["player_id"]        = acwr["player_id"].astype(int)
     fm["player_id"]          = fm["player_id"].astype(int)
 
