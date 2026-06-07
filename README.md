@@ -162,7 +162,7 @@ python data/scraping/build_minimal_feature_matrix.py
 python data/scraping/scrape_bball_reference.py acwr
 ```
 
-### 2b. Full historical scrape (Phase 2 — in progress)
+### 2b. Full historical scrape (Phase 2 — complete)
 
 ```bash
 # Ground-truth Achilles IL placements
