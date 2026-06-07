@@ -173,12 +173,31 @@ def main() -> None:
     gt = pd.read_csv(ACHILLES_CSV, parse_dates=["date"])
     gt["player_name"] = gt["player_name"].str.lstrip("•").str.strip()
 
+    # Clean ProSports slash-separated name variants: "Jeff Taylor / Jeffery Taylor (b)"
+    # Take the shortest token (usually the common NBA name) before any slash.
+    def clean_name(name: str) -> str:
+        if "/" in name:
+            candidates = [s.strip() for s in name.split("/")]
+            # Strip parenthetical suffixes like "(b)" and pick shortest clean name
+            candidates = [re.sub(r"\s*\(.*?\)\s*$", "", c).strip() for c in candidates]
+            return min(candidates, key=len)
+        # Strip trailing parentheticals: "John Wall (Hildred)" → "John Wall"
+        return re.sub(r"\s*\(.*?\)\s*$", "", name).strip()
+
+    import re
+    gt["player_name"] = gt["player_name"].apply(clean_name)
+
+    # Deduplicate: ProSports logs multiple follow-up IL entries per injury event
+    # ("recovering from surgery to repair..."). Keep only FIRST event date per player.
+    ruptures_all = gt[gt["severity"] == "rupture"].copy()
     ruptures = (
-        gt[gt["severity"] == "rupture"]
-        .copy()
-        .reset_index(drop=True)
+        ruptures_all.sort_values("date")
+        .groupby("player_name", sort=False)
+        .first()
+        .reset_index()
     )
-    print(f"  found {len(ruptures)} confirmed ruptures")
+    print(f"  raw rupture rows  : {len(ruptures_all)}")
+    print(f"  unique rupture players : {len(ruptures)}")
 
     ruptures["season_year"] = ruptures["date"].apply(get_season_year)
     ruptures["season"] = ruptures["season_year"].apply(season_str)
@@ -199,13 +218,22 @@ def main() -> None:
         key = name.lower()
         if key in name_to_id:
             return name_to_id[key]
-        # Single unambiguous partial match fallback
-        hits = [pid for n, pid in name_to_id.items() if key in n]
+        # Partial containment match
+        hits = [pid for n, pid in name_to_id.items() if key in n or n in key]
         if len(hits) == 1:
             return hits[0]
         if hits:
             print(f"    ambiguous match for '{name}': {len(hits)} candidates, using first")
             return hits[0]
+        # Last resort: match on last name + first initial
+        parts = key.split()
+        if len(parts) >= 2:
+            last = parts[-1]
+            initial = parts[0][0]
+            hits = [pid for n, pid in name_to_id.items()
+                    if last in n and n.startswith(initial)]
+            if len(hits) == 1:
+                return hits[0]
         return None
 
     rows: list[dict] = []
