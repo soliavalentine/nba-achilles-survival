@@ -64,6 +64,17 @@ ProSportsTransactions ──►  Bio / load features    ──►  (competing ri
 Injury report PDFs    ──►  BioBERT prodromal score ──►
 ```
 
+```mermaid
+graph LR
+  BR[Basketball-Reference\ngame logs 1990–present] --> FE
+  NBA[NBA Stats API\nseason stats / play-type] --> FE
+  PST[ProSportsTransactions\nground-truth IL placements] --> FE
+  PDF[Injury Report PDFs\n2015–present] --> NLP[NLP Pipeline\nSnorkel labeling + BioBERT fine-tune]
+  FE[Feature Store\nACWR 3 scales + play-style PCA] --> DH[DeepHit\ncompeting-risks survival model]
+  NLP --> DH
+  DH --> OUT[C-index / IBS / D-calibration\ntemporal train/val/test holdout]
+```
+
 ### DeepHit
 
 A deep learning survival model that handles **competing risks** (Achilles rupture vs. other career-ending event).
